@@ -1,5 +1,9 @@
+using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Data.Sqlite;
+
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls("http://*:5000");
+builder.Services.AddScoped(_ => new SqliteConnection("Data Source=../media.db"));
 
 var app = builder.Build();
 
@@ -26,5 +30,46 @@ app.Use(async (context, next) =>
 });
 
 app.MapGet("/api", () => "Succesfully authenticated!");
+
+var provider = new FileExtensionContentTypeProvider();
+app.MapGet("/api/media/{id}/file", async (int id, Microsoft.Data.Sqlite.SqliteConnection db) =>
+{
+    await db.OpenAsync();
+    using var command = db.CreateCommand();
+    command.CommandText = "SELECT filepath FROM media WHERE id = @id";
+    command.Parameters.AddWithValue("@id", id);
+
+    var path = await command.ExecuteScalarAsync() as string;
+    path = Path.GetFullPath(Path.Combine("..", path ?? ""));
+
+    if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
+    {
+        return Results.NotFound();
+    }
+
+    if (!provider.TryGetContentType(path, out var contentType))
+    {
+        contentType = "application/octet-stream";
+    }
+
+    return Results.File(path, contentType);
+});
+
+app.MapGet("/api/media/{id}/data", async (int id, SqliteConnection db) =>
+{
+    await db.OpenAsync();
+    using var cmd = new SqliteCommand("SELECT * FROM media WHERE id = @id", db);
+    cmd.Parameters.AddWithValue("@id", id);
+    using var reader = await cmd.ExecuteReaderAsync();
+
+    if (await reader.ReadAsync())
+    {
+        // Dynamically map columns to a dictionary for clean JSON output
+        var data = Enumerable.Range(0, reader.FieldCount)
+                             .ToDictionary(reader.GetName, reader.GetValue);
+        return Results.Ok(data);
+    }
+    return Results.NotFound();
+});
 
 app.Run();
