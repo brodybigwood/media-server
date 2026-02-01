@@ -1,0 +1,13 @@
+CREATE TABLE media (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    filepath TEXT UNIQUE NOT NULL,
+    jsonpath TEXT,
+    media_type TEXT,
+    timestamp INTEGER,
+    location TEXT,
+    device TEXT,
+    name TEXT,
+    app TEXT,
+    color TEXT
+);
+
