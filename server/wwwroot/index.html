@@ -1,5 +1,10 @@
-<script src="script.js"></script>
+<script defer src="script.js"></script>
 
 <label for="api-key">API KEY: </label>
 <input type="text" id="api-key" name="API KEY">
-<button id="auth-btn" onclick="authenticateAPI()">Click to authenticate</button>
+<label for="media-id">MEDIA ID: </label>
+<input type="text" id="media-id" name="MEDIA ID">
+
+<button id="auth-btn" onclick="refresh()">Refresh</button>
+
+<div id="main-media-container"></div>
