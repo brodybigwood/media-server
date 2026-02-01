@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="styles.css">
+
 <script defer src="script.js"></script>
 
 <label for="api-key">API KEY: </label>
@@ -6,5 +8,14 @@
 <input type="text" id="media-id" name="MEDIA ID">
 
 <button id="auth-btn" onclick="refresh()">Refresh</button>
+
+<div class="gallery-filter">
+    <label for="date-range">Filter by Date:</label>
+    <div class="input-group">
+        <input type="date" id="startDate" class="date-input">
+        <span>to</span>
+        <input type="date" id="endDate" class="date-input">
+    </div>
+</div>
 
 <div id="main-media-container"></div>

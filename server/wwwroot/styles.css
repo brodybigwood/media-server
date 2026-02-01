@@ -1,0 +1,21 @@
+.gallery-filter {
+    background: #222;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 25px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.date-input {
+    background: transparent;
+    border: none;
+    color: #007bff; /* Accent color */
+    font-weight: bold;
+    outline: none;
+}
+/* This customizes the calendar icon color in some browsers */
+::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
