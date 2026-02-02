@@ -55,6 +55,16 @@ app.MapGet("/api/media/{id}/file", async (int id, Microsoft.Data.Sqlite.SqliteCo
     return Results.File(path, contentType);
 });
 
+app.MapGet("/api/media/{id}/thumbnail", (int id) =>
+{
+    var filePath = Path.Combine(Directory.GetCurrentDirectory(), "thumbnail/512", id + ".jpg");
+
+    if (!File.Exists(filePath))
+        return Results.NotFound();
+
+    return Results.File(filePath, "image/jpeg");
+});
+
 app.MapGet("/api/media/{id}/data", async (int id, SqliteConnection db) =>
 {
     await db.OpenAsync();
