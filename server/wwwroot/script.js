@@ -1,5 +1,5 @@
 
-const mainMediaContainer = document.getElementById('main-media-container');
+const mediaBrowserContainer = document.getElementById('media-browser-container');
 
 async function getAuthenticatedResponse(url) {
     const api_key = document.getElementById("api-key").value;
@@ -25,21 +25,16 @@ async function getMediaData(id) {
     return await response.json();
 }
 
-async function loadMedia(id, div) {
-    const data = await getMediaData(id);
-    console.log(data);
-    const fileUrl = await getAuthenticatedUrl(`/api/media/${id}/file`);
+async function getMediaDiv(id) {
+    const div = document.createElement('div');
+    div.classList.add('media-browser');
 
-    if (data.media_type == "PHOTO") {
-        div.innerHTML = `<img src="${fileUrl}"></img>`;
-    } else {
-        div.innerHTML = `<video src="${fileUrl}" controls></video>`;
-    }
-}
+    // get thumbnail
+    const fileUrl = await getAuthenticatedUrl(`/api/media/${id}/thumbnail`);
 
-function refresh() {
-    const id = document.getElementById("media-id").value;
-    loadMedia(id, mainMediaContainer);
+    div.innerHTML = `<img src="${fileUrl}"></img>`;
+
+    return div;
 }
 
 async function getIdRangeInt(start, end) {
@@ -48,14 +43,17 @@ async function getIdRangeInt(start, end) {
     return await response.json();
 }
 
-function loadMediaArray(ids) {
-   
-    mainMediaContainer.innerHTML = '';
+let currentLoadToken = 0;
+
+async function loadMediaArray(ids) {
+    const loadToken = ++currentLoadToken;
+    mediaBrowserContainer.innerHTML = '';
  
     for (const id of ids) {
-        const div = document.createElement('div');
-        loadMedia(id, div);
-        mainMediaContainer.appendChild(div);
+        if (loadToken !== currentLoadToken) return;
+        const div = await getMediaDiv(id);
+        if (loadToken !== currentLoadToken) return;
+        mediaBrowserContainer.appendChild(div);
     }
 } 
 
