@@ -1,0 +1,8 @@
+__pycache__/
+files/
+media.db
+server/bin/
+server/obj/
+server/thumbnail/
+
+
