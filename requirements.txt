@@ -1,0 +1,13 @@
+PIL
+concurrent
+connection
+cv2
+ffmpeg
+image
+json
+numpy
+os
+os,
+pathlib
+pillow_heif
+sqlite3
