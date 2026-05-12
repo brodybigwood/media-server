@@ -4,8 +4,9 @@ const scrollHandle = document.getElementById('scroll-handle');
 const scrollBar = document.getElementById('custom-scrollbar');
 const scrollIndicator = document.getElementById('scroll-indicator');
 
-let mediaMetadata = new Map(); // Store metadata for date HUD
+let mediaMetadata = new Map(); // Store metadata (timestamps) for date HUD
 const abortControllers = new Map(); // Track pending fetches for cancellation
+const unloadTimers = new Map(); // Track timers for delayed unloading
 
 // Persist API Key
 apiKeyInput.value = localStorage.getItem('media-api-key') || '';
@@ -37,11 +38,26 @@ const observer = new IntersectionObserver((entries) => {
         const div = entry.target;
         const id = div.dataset.id;
         if (entry.isIntersecting) {
+            // Cancel any pending unload
+            if (unloadTimers.has(id)) {
+                clearTimeout(unloadTimers.get(id));
+                unloadTimers.delete(id);
+            }
             if (!div.dataset.loading && !div.querySelector('img')) {
                 loadThumbnail(id, div);
             }
         } else {
-            unloadThumbnail(id, div);
+            // Schedule unload with a 2-second delay
+            if (!unloadTimers.has(id) && div.querySelector('img')) {
+                const timer = setTimeout(() => {
+                    unloadThumbnail(id, div);
+                    unloadTimers.delete(id);
+                }, 2000); // 2 second grace period
+                unloadTimers.set(id, timer);
+            } else if (div.dataset.loading) {
+                // If it's still loading but left the area, cancel fetch immediately
+                unloadThumbnail(id, div);
+            }
         }
     });
 }, { rootMargin: '300px' }); 
@@ -66,13 +82,6 @@ async function loadThumbnail(id, div) {
         img.src = url;
         img.loading = "lazy";
         div.appendChild(img);
-        
-        // Fetch data for HUD
-        if (!mediaMetadata.has(id)) {
-            const dataResponse = await getAuthenticatedResponse(`/api/media/${id}/data`, controller.signal);
-            const data = await dataResponse.json();
-            mediaMetadata.set(id, data);
-        }
     } catch (e) {
         if (e.name !== 'AbortError') {
             console.error(`Failed to load thumbnail for ${id}:`, e);
@@ -84,14 +93,14 @@ async function loadThumbnail(id, div) {
 }
 
 function unloadThumbnail(id, div) {
-    // Cancel pending fetch
+    // 1. Cancel pending fetch
     const controller = abortControllers.get(id);
     if (controller) {
         controller.abort();
         abortControllers.delete(id);
     }
 
-    // Remove image and revoke URL
+    // 2. Remove image and revoke URL
     const img = div.querySelector('img');
     if (img) {
         img.remove();
@@ -104,16 +113,18 @@ function unloadThumbnail(id, div) {
     delete div.dataset.loading;
 }
 
-async function getIdRangeInt(start, end) {
+async function getMediaIndexRange(start, end) {
     const url = `/api/media/index/range/${start}/${end}`;
     const response = await getAuthenticatedResponse(url);
     return await response.json();
 }
 
-function loadMediaArray(ids) {
-    // Cancel all current loads
+function loadMediaArray(items) {
+    // Clear all states
     abortControllers.forEach(c => c.abort());
     abortControllers.clear();
+    unloadTimers.forEach(t => clearTimeout(t));
+    unloadTimers.clear();
 
     mediaBrowserContainer.innerHTML = '';
     objectUrlMap.forEach(url => URL.revokeObjectURL(url));
@@ -122,7 +133,10 @@ function loadMediaArray(ids) {
     
     mediaBrowserContainer.scrollTo(0, 0);
 
-    for (const id of ids) {
+    for (const item of items) {
+        const id = String(item.id);
+        mediaMetadata.set(id, item.timestamp);
+
         const div = document.createElement('div');
         div.classList.add('media-browser');
         div.dataset.id = id;
@@ -157,10 +171,10 @@ function updateDateHUD(pct) {
     const index = Math.floor(pct * (divs.length - 1));
     const targetDiv = divs[index];
     const id = targetDiv.dataset.id;
-    const data = mediaMetadata.get(id);
+    const timestamp = mediaMetadata.get(id);
 
-    if (data && data.timestamp) {
-        const date = new Date(data.timestamp * 1000);
+    if (timestamp) {
+        const date = new Date(timestamp * 1000);
         scrollIndicator.innerText = date.toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
         scrollIndicator.style.top = (parseFloat(scrollHandle.style.top) + scrollBar.offsetTop - 10) + 'px';
     }
@@ -230,7 +244,7 @@ document.querySelectorAll('.date-input').forEach(input => {
         endDate.setHours(23, 59, 59, 999);
         const endUnix = Math.floor(endDate.getTime() / 1000);
 
-        const ids = await getIdRangeInt(startUnix, endUnix);
-        loadMediaArray(ids);
+        const items = await getMediaIndexRange(startUnix, endUnix);
+        loadMediaArray(items);
     });
 });

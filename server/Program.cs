@@ -85,19 +85,19 @@ app.MapGet("/api/media/{id}/data", async (int id, SqliteConnection db) =>
 app.MapGet("/api/media/index/range/{start}/{end}", async (int start, int end, SqliteConnection db) =>
 {
     await db.OpenAsync();
-    using var cmd = new SqliteCommand("SELECT id FROM media WHERE timestamp BETWEEN @start AND @end ORDER BY timestamp DESC", db);
+    using var cmd = new SqliteCommand("SELECT id, timestamp FROM media WHERE timestamp BETWEEN @start AND @end ORDER BY timestamp DESC", db);
     cmd.Parameters.AddWithValue("@start", start);
     cmd.Parameters.AddWithValue("@end", end);
 
     using var reader = await cmd.ExecuteReaderAsync();
-    var ids = new List<int>();
+    var results = new List<object>();
 
     while (await reader.ReadAsync())
     {
-        ids.Add(reader.GetInt32(0));
+        results.Add(new { id = reader.GetInt32(0), timestamp = reader.GetInt64(1) });
     }
 
-    return Results.Ok(ids);
+    return Results.Ok(results);
 });
 
 app.Run();
