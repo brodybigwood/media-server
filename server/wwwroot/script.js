@@ -230,21 +230,29 @@ scrollBar.addEventListener('mousedown', (e) => {
     mediaBrowserContainer.scrollTop = pct * (mediaBrowserContainer.scrollHeight - mediaBrowserContainer.clientHeight);
 });
 
-// --- Date Inputs ---
+// --- Startup ---
 
-document.querySelectorAll('.date-input').forEach(input => {
-    input.addEventListener('change', async () => {
-        const start = document.getElementById('startDate').value;
-        const end = document.getElementById('endDate').value;
+async function init() {
+    if (!apiKeyInput.value) {
+        console.log("Waiting for API Key...");
+        return;
+    }
 
-        if (!start || !end) return;
-
-        const startUnix = Math.floor(new Date(start).getTime() / 1000);
-        const endDate = new Date(end);
-        endDate.setHours(23, 59, 59, 999);
-        const endUnix = Math.floor(endDate.getTime() / 1000);
-
-        const items = await getMediaIndexRange(startUnix, endUnix);
+    try {
+        const response = await getAuthenticatedResponse('/api/media/index/all');
+        if (response.status === 401) {
+            console.error("Auth failed");
+            return;
+        }
+        const items = await response.json();
         loadMediaArray(items);
-    });
-});
+    } catch (e) {
+        console.error("Failed to load media index:", e);
+    }
+}
+
+// Re-init if API key changes
+apiKeyInput.addEventListener('change', init);
+
+// Initial load
+init();
