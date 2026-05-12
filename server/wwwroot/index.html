@@ -22,5 +22,27 @@
         <div id="scroll-handle"></div>
     </div>
     <div id="scroll-indicator"></div>
+
+    <!-- Full-screen Media Viewer -->
+    <div id="media-viewer" class="hidden">
+        <button id="close-viewer" class="control-btn">✕</button>
+        
+        <div id="viewer-content">
+            <div id="viewer-slider">
+                <div class="viewer-slide" id="slide-prev"></div>
+                <div class="viewer-slide" id="slide-curr"></div>
+                <div class="viewer-slide" id="slide-next"></div>
+            </div>
+            <!-- Overlay to catch swipes over videos -->
+            <div id="swipe-overlay"></div>
+        </div>
+
+        <div id="viewer-ui-overlay">
+            <div id="media-info" class="side-controls">
+                <button id="download-btn" class="control-btn">↓</button>
+            </div>
+            <div id="viewer-date"></div>
+        </div>
+    </div>
 </body>
 </html>
