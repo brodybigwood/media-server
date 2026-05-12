@@ -1,17 +1,29 @@
-<link rel="stylesheet" href="styles.css">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Server</title>
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="script.js"></script>
+</head>
+<body>
+    <header>
+        <div class="auth-box">
+            <label for="api-key">API KEY: </label>
+            <input type="password" id="api-key" placeholder="Enter API Key">
+        </div>
 
-<script defer src="script.js"></script>
+        <div class="gallery-filter">
+            <label>Filter by Date:</label>
+            <div class="input-group">
+                <input type="date" id="startDate" class="date-input">
+                <span>to</span>
+                <input type="date" id="endDate" class="date-input">
+            </div>
+        </div>
+    </header>
 
-<label for="api-key">API KEY: </label>
-<input type="password" id="api-key" name="API KEY">
-
-<div class="gallery-filter">
-    <label for="date-range">Filter by Date:</label>
-    <div class="input-group">
-        <input type="date" id="startDate" class="date-input">
-        <span>to</span>
-        <input type="date" id="endDate" class="date-input">
-    </div>
-</div>
-
-<div id="media-browser-container"></div>
+    <main id="media-browser-container"></main>
+</body>
+</html>

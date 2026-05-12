@@ -1,8 +1,14 @@
-
 const mediaBrowserContainer = document.getElementById('media-browser-container');
+const apiKeyInput = document.getElementById("api-key");
+
+// Persist API Key
+apiKeyInput.value = localStorage.getItem('media-api-key') || '';
+apiKeyInput.addEventListener('input', () => {
+    localStorage.setItem('media-api-key', apiKeyInput.value);
+});
 
 async function getAuthenticatedResponse(url) {
-    const api_key = document.getElementById("api-key").value;
+    const api_key = apiKeyInput.value;
     const response = await fetch(url, {
         headers: { 'X-API-KEY': api_key }
     });
@@ -12,29 +18,57 @@ async function getAuthenticatedResponse(url) {
 
 async function getAuthenticatedUrl(url) {
     const response = await getAuthenticatedResponse(url);
-
     if (!response.ok) throw new Error(`Auth failed: ${response.status}`);
-
     const blob = await response.blob();
     return URL.createObjectURL(blob);
 }
 
-async function getMediaData(id) {
-    const url = `/api/media/${id}/data`;
-    const response = await getAuthenticatedResponse(url);
-    return await response.json();
+const objectUrlMap = new Map();
+
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        const div = entry.target;
+        const id = div.dataset.id;
+        if (entry.isIntersecting) {
+            if (!div.dataset.loading && !div.querySelector('img')) {
+                loadThumbnail(id, div);
+            }
+        } else {
+            unloadThumbnail(id, div);
+        }
+    });
+}, { rootMargin: '1000px' });
+
+async function loadThumbnail(id, div) {
+    div.dataset.loading = "true";
+    try {
+        const url = await getAuthenticatedUrl(`/api/media/${id}/thumbnail`);
+        // Check if still connected and relevant after async fetch
+        if (!div.isConnected) {
+             URL.revokeObjectURL(url);
+             return;
+        }
+        objectUrlMap.set(id, url);
+        const img = document.createElement('img');
+        img.src = url;
+        div.appendChild(img);
+    } catch (e) {
+        console.error(`Failed to load thumbnail for ${id}:`, e);
+    } finally {
+        delete div.dataset.loading;
+    }
 }
 
-async function getMediaDiv(id) {
-    const div = document.createElement('div');
-    div.classList.add('media-browser');
-
-    // get thumbnail
-    const fileUrl = await getAuthenticatedUrl(`/api/media/${id}/thumbnail`);
-
-    div.innerHTML = `<img src="${fileUrl}"></img>`;
-
-    return div;
+function unloadThumbnail(id, div) {
+    const img = div.querySelector('img');
+    if (img) {
+        img.remove();
+        const url = objectUrlMap.get(id);
+        if (url) {
+            URL.revokeObjectURL(url);
+            objectUrlMap.delete(id);
+        }
+    }
 }
 
 async function getIdRangeInt(start, end) {
@@ -43,17 +77,22 @@ async function getIdRangeInt(start, end) {
     return await response.json();
 }
 
-let currentLoadToken = 0;
-
-async function loadMediaArray(ids) {
-    const loadToken = ++currentLoadToken;
+function loadMediaArray(ids) {
+    // Clear existing
     mediaBrowserContainer.innerHTML = '';
- 
+    // Revoke all existing URLs
+    objectUrlMap.forEach(url => URL.revokeObjectURL(url));
+    objectUrlMap.clear();
+    
+    // Reset scroll
+    window.scrollTo(0, 0);
+
     for (const id of ids) {
-        if (loadToken !== currentLoadToken) return;
-        const div = await getMediaDiv(id);
-        if (loadToken !== currentLoadToken) return;
+        const div = document.createElement('div');
+        div.classList.add('media-browser');
+        div.dataset.id = id;
         mediaBrowserContainer.appendChild(div);
+        observer.observe(div);
     }
 } 
 
@@ -69,8 +108,7 @@ document.querySelectorAll('.date-input').forEach(input => {
         endDate.setHours(23, 59, 59, 999);
         const endUnix = Math.floor(endDate.getTime() / 1000);
 
-        ids = await getIdRangeInt(startUnix, endUnix);
-        
+        const ids = await getIdRangeInt(startUnix, endUnix);
         loadMediaArray(ids);
     });
 });
