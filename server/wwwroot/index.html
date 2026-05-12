@@ -39,9 +39,23 @@
 
         <div id="viewer-ui-overlay">
             <div id="media-info" class="side-controls">
+                <button id="info-btn" class="control-btn">ⓘ</button>
                 <button id="download-btn" class="control-btn">↓</button>
             </div>
             <div id="viewer-date"></div>
+
+            <!-- Metadata Edit Panel -->
+            <div id="edit-panel" class="hidden">
+                <h3>Edit Info</h3>
+                <label>Description</label>
+                <textarea id="edit-desc" placeholder="Add a note..."></textarea>
+                <label>Tags (comma separated)</label>
+                <input type="text" id="edit-tags" placeholder="family, summer, beach">
+                <div class="edit-panel-btns">
+                    <button id="save-metadata" class="save-btn">Save Changes</button>
+                    <button id="cancel-edit" class="cancel-btn">Cancel</button>
+                </div>
+            </div>
 
             <div id="viewer-video-ui">
                 <div id="pause-icon" class="hidden">II</div>

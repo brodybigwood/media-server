@@ -12,6 +12,14 @@ const swipeOverlay = document.getElementById('swipe-overlay');
 const closeViewerBtn = document.getElementById('close-viewer');
 const viewerDate = document.getElementById('viewer-date');
 const downloadBtn = document.getElementById('download-btn');
+const infoBtn = document.getElementById('info-btn');
+
+// Edit Panel Elements
+const editPanel = document.getElementById('edit-panel');
+const editDesc = document.getElementById('edit-desc');
+const editTags = document.getElementById('edit-tags');
+const saveMetadataBtn = document.getElementById('save-metadata');
+const cancelEditBtn = document.getElementById('cancel-edit');
 
 // Video UI Elements
 const pauseIcon = document.getElementById('pause-icon');
@@ -40,7 +48,7 @@ const preloadedUrls = new Map();
 const preloadedData = new Map(); 
 
 // --- Constants ---
-const RULER_PX_PER_SEC = 60; // Increased sensitivity
+const RULER_PX_PER_SEC = 60; 
 
 // Persist API Key
 apiKeyInput.value = localStorage.getItem('media-api-key') || '';
@@ -48,13 +56,18 @@ apiKeyInput.addEventListener('input', () => {
     localStorage.setItem('media-api-key', apiKeyInput.value);
 });
 
-async function getAuthenticatedResponse(url, signal) {
+async function getAuthenticatedResponse(url, signal, method = 'GET', body = null) {
     const api_key = apiKeyInput.value;
-    const response = await fetch(url, {
+    const options = {
+        method,
         headers: { 'X-API-KEY': api_key },
         signal: signal
-    });
-    return response;
+    };
+    if (body) {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(body);
+    }
+    return await fetch(url, options);
 }
 
 async function getAuthenticatedUrl(url, signal) {
@@ -197,6 +210,42 @@ function togglePlay() {
     }
 }
 
+// --- Metadata Edit Logic ---
+
+infoBtn.onclick = (e) => {
+    e.stopPropagation();
+    const data = preloadedData.get(currentViewerIndex);
+    if (!data) return;
+    
+    editDesc.value = data.description || '';
+    editTags.value = data.tags || '';
+    editPanel.classList.remove('hidden');
+};
+
+cancelEditBtn.onclick = () => editPanel.classList.add('hidden');
+
+saveMetadataBtn.onclick = async () => {
+    const item = mediaItems[currentViewerIndex];
+    const data = {
+        description: editDesc.value,
+        tags: editTags.value
+    };
+
+    try {
+        const res = await getAuthenticatedResponse(`/api/media/${item.id}/metadata`, null, 'POST', data);
+        if (res.ok) {
+            // Update local cache
+            const currentData = preloadedData.get(currentViewerIndex);
+            preloadedData.set(currentViewerIndex, { ...currentData, ...data });
+            editPanel.classList.add('hidden');
+        } else {
+            alert("Failed to save metadata");
+        }
+    } catch (e) {
+        console.error("Save failed:", e);
+    }
+};
+
 // --- Viewer Logic ---
 
 async function preloadIndex(index) {
@@ -266,6 +315,7 @@ async function renderSlide(index, slideElement) {
 async function openViewer(index) {
     if (index < 0 || index >= mediaItems.length) return;
     mediaViewer.classList.remove('hidden');
+    editPanel.classList.add('hidden'); // Close edit panel on change
     currentViewerIndex = index;
     const item = mediaItems[index];
     
@@ -305,6 +355,7 @@ async function openViewer(index) {
 
 function closeViewer() {
     mediaViewer.classList.add('hidden');
+    editPanel.classList.add('hidden');
     document.querySelectorAll('.viewer-slide video').forEach(v => v.pause());
     if (currentViewerIndex !== -1) {
         const targetDiv = document.getElementById(`media-item-${currentViewerIndex}`);
@@ -330,6 +381,7 @@ function setTranslate(vh) {
 
 swipeOverlay.addEventListener('touchstart', e => {
     if (mediaViewer.classList.contains('hidden')) return;
+    if (!editPanel.classList.contains('hidden')) return; // Block swipe when editing
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
     swipeStartTime = Date.now();
@@ -340,6 +392,7 @@ swipeOverlay.addEventListener('touchstart', e => {
 }, { passive: true });
 
 swipeOverlay.addEventListener('touchmove', e => {
+    if (!editPanel.classList.contains('hidden')) return;
     const deltaX = e.touches[0].clientX - touchStartX;
     const deltaY = e.touches[0].clientY - touchStartY;
 
@@ -363,14 +416,13 @@ swipeOverlay.addEventListener('touchmove', e => {
         const scrubDelta = -(deltaX / RULER_PX_PER_SEC);
         let newTime = scrubStartTime + scrubDelta;
         newTime = Math.max(0, Math.min(currentVideoElement.duration, newTime));
-        
-        // Direct update for frame-accurate responsiveness
         currentVideoElement.currentTime = newTime;
         updateRuler(newTime);
     }
 }, { passive: true });
 
 swipeOverlay.addEventListener('touchend', e => {
+    if (!editPanel.classList.contains('hidden')) return;
     const deltaX = e.changedTouches[0].clientX - touchStartX;
     const deltaY = e.changedTouches[0].clientY - touchStartY;
     const deltaTime = Date.now() - swipeStartTime;
@@ -412,7 +464,7 @@ swipeOverlay.addEventListener('touchend', e => {
 // Mouse wheel
 let wheelTimeout;
 swipeOverlay.addEventListener('wheel', e => {
-    if (mediaViewer.classList.contains('hidden')) return;
+    if (mediaViewer.classList.contains('hidden') || !editPanel.classList.contains('hidden')) return;
     if (wheelTimeout) return;
     if (Math.abs(e.deltaY) > 20) {
         wheelTimeout = setTimeout(() => wheelTimeout = null, 300);
@@ -431,6 +483,7 @@ swipeOverlay.addEventListener('wheel', e => {
 
 window.addEventListener('keydown', (e) => {
     if (mediaViewer.classList.contains('hidden')) return;
+    if (!editPanel.classList.contains('hidden')) return; // Disable viewer keys when editing
     if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') openViewer(currentViewerIndex - 1);
     if (e.key === 'ArrowDown' || e.key === 'ArrowRight') openViewer(currentViewerIndex + 1);
     if (e.key === 'Escape') closeViewer();

@@ -253,7 +253,7 @@ header {
 #viewer-date {
     position: absolute;
     left: 20px;
-    bottom: 120px; /* Raised above the ruler */
+    bottom: 120px; 
     background: rgba(0, 0, 0, 0.5);
     padding: 10px 18px;
     border-radius: 8px;
@@ -261,6 +261,64 @@ header {
     font-weight: bold;
     pointer-events: auto;
 }
+
+/* Edit Panel */
+#edit-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(30, 30, 30, 0.95);
+    padding: 25px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 2300;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    pointer-events: auto;
+}
+
+#edit-panel h3 { margin: 0 0 10px 0; }
+
+#edit-panel label {
+    font-size: 12px;
+    color: #888;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+#edit-panel textarea, #edit-panel input {
+    background: #222;
+    border: 1px solid #444;
+    color: white;
+    padding: 10px;
+    border-radius: 6px;
+    font-family: inherit;
+}
+
+#edit-panel textarea { height: 100px; resize: none; }
+
+.edit-panel-btns {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.save-btn, .cancel-btn {
+    flex-grow: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.save-btn { background: #007bff; color: white; }
+.cancel-btn { background: #333; color: white; }
 
 /* SoundCloud Ruler UI */
 #viewer-video-ui {

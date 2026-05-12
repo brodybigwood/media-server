@@ -8,6 +8,8 @@ CREATE TABLE media (
     device TEXT,
     name TEXT,
     app TEXT,
-    color TEXT
+    color TEXT,
+    description TEXT,
+    tags TEXT
 );
 

@@ -74,9 +74,12 @@ app.MapGet("/api/media/{id}/data", async (int id, SqliteConnection db) =>
 
     if (await reader.ReadAsync())
     {
-        // Dynamically map columns to a dictionary for clean JSON output
+        // Dynamically map columns to a dictionary for clean JSON output, handling NULLs
         var data = Enumerable.Range(0, reader.FieldCount)
-                             .ToDictionary(reader.GetName, reader.GetValue);
+                             .ToDictionary(
+                                 reader.GetName, 
+                                 i => reader.IsDBNull(i) ? null : reader.GetValue(i)
+                             );
         return Results.Ok(data);
     }
     return Results.NotFound();
@@ -122,4 +125,18 @@ app.MapGet("/api/media/index/range/{start}/{end}", async (int start, int end, Sq
     return Results.Ok(results);
 });
 
+app.MapPost("/api/media/{id}/metadata", async (int id, MetadataUpdate update, SqliteConnection db) =>
+{
+    await db.OpenAsync();
+    using var cmd = new SqliteCommand("UPDATE media SET description = @desc, tags = @tags WHERE id = @id", db);
+    cmd.Parameters.AddWithValue("@desc", (object?)update.Description ?? DBNull.Value);
+    cmd.Parameters.AddWithValue("@tags", (object?)update.Tags ?? DBNull.Value);
+    cmd.Parameters.AddWithValue("@id", id);
+
+    var rows = await cmd.ExecuteNonQueryAsync();
+    return rows > 0 ? Results.Ok() : Results.NotFound();
+});
+
 app.Run();
+
+public record MetadataUpdate(string? Description, string? Tags);
